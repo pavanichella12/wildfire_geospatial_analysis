@@ -184,8 +184,7 @@ def show_data_exploration_page(gdf):
         "Fire Size Range (Acres)",
         min_value=float(gdf['TOTALACRES'].min()),
         max_value=float(gdf['TOTALACRES'].max()),
-        value=(float(gdf['TOTALACRES'].min()), float(gdf['TOTALACRES'].max()))
-    )
+        value=(float(gdf['TOTALACRES'].min()), float(gdf['TOTALACRES'].max())))
     
     # Apply filters
     filtered_gdf = gdf[
@@ -257,8 +256,7 @@ def show_spatial_analysis_page(gdf):
         "Year Range",
         min_value=int(gdf['FIREYEAR'].min()),
         max_value=int(gdf['FIREYEAR'].max()),
-        value=(int(gdf['FIREYEAR'].min()), int(gdf['FIREYEAR'].max()))
-    )
+        value=(int(gdf['FIREYEAR'].min()), int(gdf['FIREYEAR'].max())))
     
     size_range = st.sidebar.slider(
         "Fire Size Range (Acres)",
