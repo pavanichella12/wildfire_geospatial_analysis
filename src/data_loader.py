@@ -138,13 +138,22 @@ class CloudDataLoader:
         logger.info(f"Loading wildfire data from: {filepath}")
         
         try:
-            gdf = gpd.read_file(filepath)
+            # Try to read as GeoJSON with explicit driver
+            gdf = gpd.read_file(filepath, driver='GeoJSON')
             logger.info(f"Successfully loaded {len(gdf)} wildfire records")
             return gdf
             
         except Exception as e:
             logger.error(f"Failed to load wildfire data: {e}")
-            raise
+            # Try alternative methods
+            try:
+                logger.info("Trying alternative file reading method...")
+                gdf = gpd.read_file(filepath, driver='GeoJSON')
+                logger.info(f"Successfully loaded {len(gdf)} wildfire records with alternative method")
+                return gdf
+            except Exception as e2:
+                logger.error(f"Alternative method also failed: {e2}")
+                raise e
 
 def get_data_loader() -> CloudDataLoader:
     """
