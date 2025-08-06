@@ -177,7 +177,7 @@ def show_data_exploration_page(gdf):
         "Year Range",
         min_value=int(gdf['FIREYEAR'].min()),
         max_value=int(gdf['FIREYEAR'].max()),
-        value=(int(gdf['FIREYEAR'].min()), int(gdf['FIREYEAR'].max()))
+        value=(int(gdf['FIREYEAR'].min()), int(gdf['FIREYEAR'].max())))
     
     # Size range filter
     size_range = st.sidebar.slider(
