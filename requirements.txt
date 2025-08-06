@@ -24,6 +24,7 @@ bokeh>=2.4.0
 
 # Web dashboard
 streamlit>=1.25.0
+streamlit-folium>=0.13.0
 
 # Jupyter notebooks
 jupyter>=1.0.0

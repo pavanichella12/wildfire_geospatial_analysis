@@ -9,8 +9,8 @@ import geopandas as gpd
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import folium
-from streamlit_folium import folium_static
+# import folium
+# from streamlit_folium import folium_static
 import numpy as np
 from datetime import datetime
 import sys
@@ -21,9 +21,9 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 from data_loader import load_wildfire_data, get_data_loader
-from data_processing import WildfireDataProcessor
-from spatial_analysis import WildfireSpatialAnalyzer
-from visualization import WildfireVisualizer
+# from data_processing import WildfireDataProcessor
+# from spatial_analysis import WildfireSpatialAnalyzer
+# from visualization import WildfireVisualizer
 
 # Page configuration
 st.set_page_config(
