@@ -87,8 +87,69 @@ def load_data_from_s3():
         st.success(f"✅ Successfully loaded {len(gdf)} records from S3")
         return gdf
         
+    except ImportError:
+        st.error("❌ boto3 not installed. Please add boto3 to requirements.txt")
+        return None
     except Exception as e:
         st.error(f"❌ Failed to load data from S3: {str(e)}")
+        return None
+
+@st.cache_data
+def load_data_from_public_s3():
+    """
+    Load wildfire data from public S3 bucket (no credentials needed).
+    """
+    try:
+        import requests
+        from io import BytesIO
+        
+        # Public S3 URL (if you make bucket public)
+        bucket_name = "wildfire-dataset-pavani"
+        file_path = "National_USFS_Fire_Occurrence_Point_(Feature_Layer).geojson"
+        public_url = f"https://{bucket_name}.s3.amazonaws.com/{file_path}"
+        
+        st.info("☁️ Loading data from public S3...")
+        
+        # Download from public URL
+        response = requests.get(public_url)
+        response.raise_for_status()
+        
+        # Load with GeoPandas
+        gdf = gpd.read_file(BytesIO(response.content))
+        
+        st.success(f"✅ Successfully loaded {len(gdf)} records from public S3")
+        return gdf
+        
+    except Exception as e:
+        st.error(f"❌ Failed to load from public S3: {str(e)}")
+        return None
+
+@st.cache_data
+def load_data_from_github():
+    """
+    Load wildfire data from GitHub releases (free hosting).
+    """
+    try:
+        import requests
+        from io import BytesIO
+        
+        # GitHub releases URL (you can upload your file to GitHub releases)
+        github_url = "https://github.com/pavanichella12/wildfire_geospatial_analysis/releases/download/v1.0/wildfire_data.geojson"
+        
+        st.info("📦 Loading data from GitHub releases...")
+        
+        # Download from GitHub
+        response = requests.get(github_url)
+        response.raise_for_status()
+        
+        # Load with GeoPandas
+        gdf = gpd.read_file(BytesIO(response.content))
+        
+        st.success(f"✅ Successfully loaded {len(gdf)} records from GitHub")
+        return gdf
+        
+    except Exception as e:
+        st.error(f"❌ Failed to load from GitHub: {str(e)}")
         return None
 
 def show_overview_page(gdf):
@@ -413,7 +474,7 @@ def main():
     
     data_source = st.sidebar.selectbox(
         "Choose Data Source",
-        ["Auto (Recommended)", "Uploaded File", "S3 Bucket", "Google Drive", "Dropbox"]
+        ["Auto (Recommended)", "Public S3 (Free)", "GitHub (Free)", "Uploaded File", "S3 Bucket", "Google Drive", "Dropbox"]
     )
     
     # Load data based on selection
