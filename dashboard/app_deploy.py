@@ -9,8 +9,7 @@ import geopandas as gpd
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-# import folium
-# from streamlit_folium import folium_static
+
 import numpy as np
 from datetime import datetime
 import sys
@@ -55,30 +54,41 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 @st.cache_data
-def load_data_from_cloud():
+def load_data_from_s3():
     """
-    Load wildfire data from cloud storage with fallback to local.
+    Load wildfire data directly from S3 using boto3.
     """
     try:
-        # Try to load from cloud storage first
-        # You can configure these in Streamlit Cloud secrets
-        google_drive_id = st.secrets.get("GOOGLE_DRIVE_FILE_ID", "1KWRrW5i6Tccj7egW3oXuna6vqeo28g9z")
-        dropbox_link = st.secrets.get("DROPBOX_SHARE_LINK", "")
+        import boto3
+        from io import BytesIO
         
-        if google_drive_id:
-            st.info("🌐 Loading data from Google Drive...")
-            return load_wildfire_data("google_drive", file_id=google_drive_id)
-        elif dropbox_link:
-            st.info("🌐 Loading data from Dropbox...")
-            return load_wildfire_data("dropbox", share_link=dropbox_link)
-        else:
-            # Fallback to local file
-            st.info("📁 Loading data from local storage...")
-            return load_wildfire_data("local")
-            
+        # Access Streamlit secrets
+        aws_access_key_id = st.secrets["AWS_ACCESS_KEY_ID"]
+        aws_secret_access_key = st.secrets["AWS_SECRET_ACCESS_KEY"]
+        bucket_name = st.secrets["S3_BUCKET"]
+        file_path = st.secrets["S3_FILE_PATH"]
+        
+        st.info("☁️ Loading data from S3...")
+        
+        # Connect to S3
+        s3 = boto3.client(
+            "s3",
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+        )
+        
+        # Download the file into memory
+        obj = s3.get_object(Bucket=bucket_name, Key=file_path)
+        geojson_data = obj["Body"].read()
+        
+        # Load it using GeoPandas
+        gdf = gpd.read_file(BytesIO(geojson_data))
+        
+        st.success(f"✅ Successfully loaded {len(gdf)} records from S3")
+        return gdf
+        
     except Exception as e:
-        st.error(f"❌ Failed to load data: {str(e)}")
-        st.info("💡 To use cloud storage, configure GOOGLE_DRIVE_FILE_ID or DROPBOX_SHARE_LINK in Streamlit Cloud secrets.")
+        st.error(f"❌ Failed to load data from S3: {str(e)}")
         return None
 
 def show_overview_page(gdf):
@@ -393,21 +403,56 @@ def main():
     
     # Data source selection
     st.sidebar.subheader("📁 Data Source")
+    
+    # File upload option
+    uploaded_file = st.sidebar.file_uploader(
+        "Upload Data File (GeoJSON)",
+        type=['geojson'],
+        help="Upload your wildfire data file"
+    )
+    
     data_source = st.sidebar.selectbox(
         "Choose Data Source",
-        ["Cloud Storage (Auto)", "Local File", "Google Drive", "Dropbox"]
+        ["Auto (Recommended)", "Uploaded File", "S3 Bucket", "Google Drive", "Dropbox"]
     )
     
     # Load data based on selection
-    if data_source == "Cloud Storage (Auto)":
-        gdf = load_data_from_cloud()
-    elif data_source == "Local File":
-        gdf = load_wildfire_data("local")
+    if data_source == "Auto (Recommended)":
+        gdf = load_data_from_s3()
+    elif data_source == "Uploaded File":
+        if uploaded_file is not None:
+            try:
+                st.info("📁 Loading uploaded file...")
+                # Save uploaded file temporarily
+                with open("temp_data.geojson", "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+                gdf = gpd.read_file("temp_data.geojson", driver='GeoJSON')
+                st.success(f"✅ Successfully loaded {len(gdf)} records from uploaded file")
+            except Exception as e:
+                st.error(f"❌ Failed to load uploaded file: {str(e)}")
+                gdf = None
+        else:
+            st.warning("⚠️ Please upload a GeoJSON file")
+            gdf = None
     elif data_source == "Google Drive":
         file_id = st.sidebar.text_input("Google Drive File ID")
         if file_id:
             gdf = load_wildfire_data("google_drive", file_id=file_id)
         else:
+            gdf = None
+    elif data_source == "S3 Bucket":
+        bucket_name = st.sidebar.text_input("S3 Bucket Name")
+        object_key = st.sidebar.text_input("S3 Object Key (file path)")
+        if bucket_name and object_key:
+            try:
+                st.info("☁️ Loading data from S3...")
+                gdf = load_wildfire_data("s3", bucket_name=bucket_name, object_key=object_key)
+                st.success(f"✅ Successfully loaded {len(gdf)} records from S3")
+            except Exception as e:
+                st.error(f"❌ Failed to load from S3: {str(e)}")
+                gdf = None
+        else:
+            st.warning("⚠️ Please provide S3 bucket name and object key")
             gdf = None
     elif data_source == "Dropbox":
         share_link = st.sidebar.text_input("Dropbox Share Link")

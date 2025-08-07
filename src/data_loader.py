@@ -12,6 +12,8 @@ import logging
 from typing import Optional, Union
 import gzip
 import tempfile
+import boto3
+from botocore.exceptions import NoCredentialsError, ClientError
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -102,6 +104,49 @@ class CloudDataLoader:
             logger.error(f"Failed to download from Dropbox: {e}")
             raise
     
+    def download_from_s3(self, bucket_name: str, object_key: str, filename: str = None) -> str:
+        """
+        Download file from AWS S3.
+        
+        Args:
+            bucket_name: S3 bucket name
+            object_key: S3 object key (file path in bucket)
+            filename: Local filename to save as (optional)
+            
+        Returns:
+            Path to downloaded file
+        """
+        if filename is None:
+            filename = os.path.basename(object_key)
+            
+        filepath = self.data_dir / filename
+        
+        if filepath.exists():
+            logger.info(f"File already exists: {filepath}")
+            return str(filepath)
+        
+        logger.info(f"Downloading from S3: s3://{bucket_name}/{object_key}")
+        
+        try:
+            # Initialize S3 client
+            s3_client = boto3.client('s3')
+            
+            # Download file
+            s3_client.download_file(bucket_name, object_key, str(filepath))
+            
+            logger.info(f"Successfully downloaded: {filepath}")
+            return str(filepath)
+            
+        except NoCredentialsError:
+            logger.error("AWS credentials not found. Please configure AWS credentials.")
+            raise
+        except ClientError as e:
+            logger.error(f"S3 error: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Failed to download from S3: {e}")
+            raise
+    
     def load_wildfire_data(self, source: str = "local", **kwargs) -> gpd.GeoDataFrame:
         """
         Load wildfire data from various sources.
@@ -131,6 +176,13 @@ class CloudDataLoader:
             if not share_link:
                 raise ValueError("Dropbox share_link is required")
             filepath = self.download_from_dropbox(share_link, filename)
+            
+        elif source == "s3":
+            bucket_name = kwargs.get("bucket_name")
+            object_key = kwargs.get("object_key")
+            if not bucket_name or not object_key:
+                raise ValueError("S3 bucket_name and object_key are required")
+            filepath = self.download_from_s3(bucket_name, object_key, filename)
             
         else:
             raise ValueError(f"Unsupported source: {source}")
