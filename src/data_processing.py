@@ -8,8 +8,6 @@ Demonstrates advanced geospatial data analysis capabilities including:
 - Feature engineering for machine learning
 - Automated data processing workflows
 
-Author: [Your Name]
-Date: 2025
 """
 
 import pandas as pd
